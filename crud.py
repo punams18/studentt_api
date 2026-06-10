@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 from models import Student
+
 
 def create_student(db: Session, student):
     new_student = Student(
@@ -20,9 +22,17 @@ def get_students(db: Session):
 
 
 def get_student(db: Session, student_id: int):
-    return db.query(Student).filter(
+    student = db.query(Student).filter(
         Student.id == student_id
     ).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
+    return student
 
 
 def update_student(db: Session, student_id: int, student):
@@ -30,11 +40,18 @@ def update_student(db: Session, student_id: int, student):
         Student.id == student_id
     ).first()
 
+    if not existing:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
     existing.name = student.name
     existing.email = student.email
     existing.course = student.course
 
     db.commit()
+    db.refresh(existing)
 
     return existing
 
@@ -44,5 +61,13 @@ def delete_student(db: Session, student_id: int):
         Student.id == student_id
     ).first()
 
+    if not student:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
     db.delete(student)
     db.commit()
+
+    return {"message": "Student deleted successfully"}
